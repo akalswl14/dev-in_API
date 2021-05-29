@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.devin.dev.entity.reply.ReplyStatus.SELECTED;
+
 @Service
 @RequiredArgsConstructor
 public class ReplyService {
@@ -124,4 +126,25 @@ public class ReplyService {
         return !firstUser.getId().equals(secondUser.getId());
     }
 
+    // 답변 삭제
+    @Transactional
+    public boolean deleteReply(Long userId, Long replyId) throws IllegalArgumentException {
+        // 엔티티 조회. 실패시 IllegalArgumentException
+        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("유저 조회 실패"));
+
+        // 답변 작성자인지 확인.
+        Reply reply = replyRepository.findById(replyId).orElseThrow(() -> new IllegalArgumentException("답변 조회 실패"));
+        if(isNotSameUser(user,reply.getUser())){
+            throw new IllegalArgumentException("삭제 권한 없는 유저");
+        }
+        // 채택된 답변인지 확인.
+        if(reply.getStatus() == SELECTED){
+            throw new IllegalArgumentException("채택된 답변");
+        }
+        // 리플 작성자 경험치 삭제.
+        user.changeExp(User.ExpChangeType.DELETE_REPLY);
+        // 댓글 삭제.
+        replyRepository.delete(reply);
+        return true;
+    }
 }
